@@ -12,6 +12,28 @@ pub enum ApiKeyManagerEvent {
     KeysUpdated,
 }
 
+/// Configuration for a custom OpenAI-compatible API endpoint.
+///
+/// Allows users to connect Warp Agent to any service that implements
+/// the OpenAI Chat Completions API (e.g. Ollama, LM Studio, Azure OpenAI, etc.).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct CustomOpenAICompatibleConfig {
+    /// The base URL of the OpenAI-compatible API (e.g. "http://localhost:11434").
+    /// The client appends "/v1/chat/completions" automatically.
+    pub base_url: String,
+    /// Optional API key. Leave empty for local endpoints that don't require authentication.
+    pub api_key: String,
+    /// The model identifier to pass in the request body (e.g. "llama3", "gpt-4o").
+    pub model_name: String,
+}
+
+impl CustomOpenAICompatibleConfig {
+    /// Returns `true` when at least a base URL and model name have been provided.
+    pub fn is_configured(&self) -> bool {
+        !self.base_url.is_empty() && !self.model_name.is_empty()
+    }
+}
+
 /// User-provided API keys for AI providers.
 ///
 /// These are used for "Bring Your Own API Key" functionality, allowing
@@ -22,6 +44,9 @@ pub struct ApiKeys {
     pub anthropic: Option<String>,
     pub openai: Option<String>,
     pub open_router: Option<String>,
+    /// Configuration for a custom OpenAI-compatible API endpoint.
+    #[serde(default)]
+    pub custom_openai_compatible: Option<CustomOpenAICompatibleConfig>,
 }
 
 impl ApiKeys {
@@ -30,6 +55,10 @@ impl ApiKeys {
             || self.anthropic.is_some()
             || self.google.is_some()
             || self.open_router.is_some()
+            || self
+                .custom_openai_compatible
+                .as_ref()
+                .is_some_and(|c| c.is_configured())
     }
 }
 
